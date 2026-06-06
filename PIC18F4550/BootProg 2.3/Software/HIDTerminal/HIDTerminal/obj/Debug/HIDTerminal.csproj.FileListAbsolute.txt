@@ -1,0 +1,8 @@
+C:\Users\Tiago\Documents\SharpDevelop Projects\HIDTerminal\HIDTerminal\bin\Debug\HIDTerminal.exe.config
+C:\Users\Tiago\Documents\SharpDevelop Projects\HIDTerminal\HIDTerminal\bin\Debug\HIDTerminal.exe
+C:\Users\Tiago\Documents\SharpDevelop Projects\HIDTerminal\HIDTerminal\obj\Debug\HIDTerminal.exe
+C:\Users\Tiago\Documents\SharpDevelop Projects\HIDTerminal\HIDTerminal\obj\Debug\HIDTerminal.MainForm.resources
+C:\Users\Tiago\Documents\SharpDevelop Projects\HIDTerminal\HIDTerminal\obj\Debug\HIDTerminal.csprojResolveAssemblyReference.cache
+C:\Users\Tiago\Documents\SharpDevelop Projects\HIDTerminal\HIDTerminal\obj\Debug\HIDTerminal.csproj.GenerateResource.Cache
+C:\Users\Tiago\Documents\SharpDevelop Projects\HIDTerminal\HIDTerminal\bin\Debug\UsbLibrary.dll
+C:\Users\Tiago\Documents\SharpDevelop Projects\HIDTerminal\HIDTerminal\bin\Debug\Nini.dll

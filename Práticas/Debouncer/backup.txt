@@ -1,0 +1,99 @@
+#include "p18f4550.h"
+#include "intimer.h"
+
+#pragma config WDT = OFF
+#pragma config PBADEN = OFF
+
+/* ------------------------- Configurações -------------------------- */
+
+#define DEBOUNCE_DELAY 50
+#define LR LATDbits.LATD7			// LED Heart
+
+#define BTN1 PORTBbits.RB7
+#define BTN2 PORTBbits.RB6
+#define BTN3 PORTBbits.RB5
+
+#define btn2 botoes.bits.b0
+#define btn3 botoes.bits.b1
+#define btn2and3 botoes.bits.b2
+
+/* ----------------------- Debouncer genérico ----------------------- */
+
+// Union para números de 8 bits. Pode manipular bits individualmente
+typedef union {
+	unsigned char value;
+	struct {
+		unsigned int b0 : 1;
+		unsigned int b1 : 1;
+		unsigned int b2 : 1;
+		unsigned int b3 : 1;
+		unsigned int b4 : 1;
+		unsigned int b5 : 1;
+		unsigned int b6 : 1;
+		unsigned int b7 : 1;
+	} bits;
+} uint8;
+
+// Função para verificar debounce de condições de entrada (Ex: botões)
+// Ex: entra 0000 0110 -> Condições [1] e [2] são verdadeiras (bits[2:3] = 1).
+void debounce(uint8* condicoes, unsigned long* main_timer) {
+	static unsigned long dbtimer = 0;			// Timer usado para debounce das ações
+	static uint8 status = 0;					// Status das ações registradas
+	static uint8 executado = 0;					// Executado ou não
+	
+	// Detecta mudança de status (EX: borda de subida de um botão)
+	if (status.value != (*condicoes).value) {
+		status = *condicoes;
+		executado.value = 0;
+		dbtimer = *main_timer;
+	}
+	
+	// Encerra a função caso: tempo de debounce decorrido OU uma ação já tenha sido executada
+	if ((*main_timer)-dbtimer < DEBOUNCE_DELAY || executado.value) {
+		(*condicoes).value = 0;
+		return;
+	}
+	
+	executado.value = (*condicoes).value;
+}
+
+/* ------------------------------- Main ----------------------------- */
+
+void main(void) {
+	uint8 botoes = 0;
+	unsigned char blink_3 = 0;
+	
+	TRISD = 0;
+	TRISB = 0xE0;
+	
+	ADCON1 = 0x0F;					// Torna Pinos RB0:4 Digital Inputs
+	INTCON2bits.RBPU = 1;			// Desabilita os resitores PULLUP de B
+	
+	setup_timer();					// Inicia "timer"
+	
+	LATDbits.LATD5 = 0;
+	
+	while(1) {
+		LR = (timer%1000) >= 500;
+		
+		LATDbits.LATD6 = BTN1;
+		
+		btn2 = BTN2;
+		btn3 = BTN3;
+		btn2and3 = BTN2 && BTN3;
+		
+		debounce(&botoes, &timer);
+		
+		if (btn2and3) {
+			blink_3 = !blink_3;
+		} else if(btn2) {
+			LATDbits.LATD5 = !LATDbits.LATD5;
+		} else if (btn3) {
+			LATDbits.LATD4 = !LATDbits.LATD4;
+		}
+		
+		if (blink_3) {
+			LATDbits.LATD4 = (timer%100) >= 50;
+		}
+	}
+}
