@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Pt12 - COM Serial")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b220540203f22b35c078fdf74dd8e075e39676c2")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+174bfa6fbaa52d817134cb23b7700979163ce6a8")]
 [assembly: System.Reflection.AssemblyProductAttribute("Pt12 - COM Serial")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Pt12 - COM Serial")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

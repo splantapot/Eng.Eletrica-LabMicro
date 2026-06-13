@@ -71,21 +71,9 @@ void main(void) {
     P3REN |= BIT6 + BIT7;
     P3OUT &= ~(BIT6 + BIT7);
 
-    while(1) {
-        //if (lin_frame_ready) {
-            //P2OUT = (lin_rx_buffer[1] == 0xAA)? P2OUT | BIT4 : P2OUT & (~BIT4);
-            if (lin_rx_buffer[1] == 0xAA) {
-                P2OUT |= BIT4;
-            } else {
-                P2OUT &= ~BIT4;
-            }
-            while (!(IFG2 & UCA0TXIFG));  // Aguarda buffer livre
-            UCA0TXBUF = 'E';
-            // === Processar frame LIN aqui ===
-            // lin_rx_buffer[0] = PID, etc.
-            lin_frame_ready = 0;
-            lin_rx_index = 0;
-        //}
+    while (1) {
+        P3OUT = (UCA0ABCTL & UCBTOE)? P3OUT|BIT6 : P3OUT&(~BIT6);
+        P3OUT = (UCA0ABCTL & UCSTOE)? P3OUT|BIT5 : P3OUT&(~BIT5);
     }
 }
 

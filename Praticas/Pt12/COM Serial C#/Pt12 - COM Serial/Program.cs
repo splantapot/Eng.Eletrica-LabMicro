@@ -8,9 +8,15 @@ namespace Pratica_12 {
     class Program {
 
         static SerialPort serialPort;
-        static bool running = false;
+        static bool executando = false;
+        static bool baudrate_ok = false;
+        static bool calibrado_ok = false;
+        static string str_buffer = "";
+        static int i = 0;
 
         const int TIMEOUT = 1000; // Timeout em milissegundos
+        const byte cal_DCOCTL = 68;
+        const byte cal_BCSCTL1 = 135;
 
         static void Main(string[] args) {
             Console.WriteLine("=============================================");
@@ -27,7 +33,7 @@ namespace Pratica_12 {
             serialPort.WriteTimeout = TIMEOUT;
 
             // Loop para encontrar e abrir a porta COM
-            while (!running) {
+            while (!executando) {
 
                 /*string[] portas = SerialPort.GetPortNames();
                 if (portas.Length == 0) {
@@ -42,7 +48,7 @@ namespace Pratica_12 {
                     try {
                         serialPort.Open();
                         Console.WriteLine($"Porta Serial '{serialPort.PortName}' aberta!");
-                        running = true;
+                        executando = true;
                     } catch (Exception ex) {
                         Console.WriteLine($"Error: {ex.Message}");
                         Console.WriteLine("Pressione qualquer tecla para tentar novamente...");
@@ -59,15 +65,40 @@ namespace Pratica_12 {
             // 1. Inicia a leitura de dados em segundo plano
             Task.Run(() => LerDados());
 
-            // 2. Inicia o envio do calibrador em segundo plano para não travar o Main
+            // 2. Inicia o envio do calibrador em segundo plano
             Task.Run(() => {
-                while (running) {
-                    EnviarBreak();
-                    EnviarDelimitador();
-                    EnviarByte(0x55);
-                    EnviarByte(0xAA);
+                while (executando) {
+                    try {
+                        // Pula o processo de calibração se o baudrate já estiver confirmado
+                        if (!baudrate_ok) {
+                            // Envia break
+                            serialPort.BreakState = false;
+                            serialPort.BreakState = true;
+                            EsperarMilissegundos(0.96);
 
-                    Thread.Sleep(10);
+                            // Envia delimitador
+                            serialPort.BreakState = false;
+                            EsperarMilissegundos(0.16);
+                        }
+
+                        // Evnvia o synch byte U (0x55)
+                        EnviarByte(0x55);
+
+                        if (!calibrado_ok) {
+                            EnviarByte(cal_DCOCTL);
+                            EnviarByte(cal_BCSCTL1);
+                        }
+
+                        // Envia o valor de calibração (0xAA)
+                        EnviarByte(0xAA);
+
+                        EsperarMilissegundos(2.0);
+
+                        // Intervalo entre tentativas de calibração
+                        Thread.Sleep(500);
+                    } catch (Exception ex) {
+                        if (executando) Console.WriteLine($"Erro no ciclo: {ex.Message}");
+                    }
                 }
             });
 
@@ -75,45 +106,63 @@ namespace Pratica_12 {
             Console.WriteLine("Pressione qualquer tecla para sair...");
             Console.ReadKey();
 
-            running = false;
+            executando = false;
+            baudrate_ok = true;
             serialPort.Close();
-            Console.WriteLine("Porta serial fechada. Programa encerrado.");
+            Console.WriteLine("\nPorta serial fechada. Programa encerrado.");
         }
 
         static void LerDados() {
-            while (running) {
+            while (executando) {
                 try {
-                    string data = serialPort.ReadExisting();
-                    if (!string.IsNullOrEmpty(data)) {
-                        Console.WriteLine($"DT: {data}");
-                        continue;
+                    while (serialPort.BytesToRead > 0) {
+                        byte v = (byte)serialPort.ReadByte();
+
+                        // Chegada de calibração
+                        if (v == 0xAA) {
+                            calibrado_ok = true;
+                            baudrate_ok = false; // Irá solicitar uma nova calibração de UART
+                            i = 1;  // Prepara para exibir os valores de calibração
+                            str_buffer = "";
+                            Console.WriteLine("Calibração confirmada!");
+                        } else if (i >= 1) {
+                            switch (i) {
+                                case 1:
+                                    str_buffer += $"DCOCTL: {v} || ";
+                                    i++;
+                                    break;
+                                case 2:
+                                    str_buffer += $"BCSCTL1: {v}";
+                                    Console.WriteLine(str_buffer);
+                                    i = 0;
+                                    str_buffer = "";
+                                    break;
+                            }
+                        } else if (v == 0x55 /* 'U' */) {
+                            baudrate_ok = true;
+                            Console.WriteLine("Baudrate confirmado!");
+                        } else {
+                            str_buffer += (char)v;
+                            if (v == '\n') {
+                                Console.WriteLine(str_buffer);
+                                str_buffer = "";
+                            }
+                        }
                     }
                 } catch (TimeoutException) {
                     // Timeout gerenciado pelo hardware, continua tentando
                 } catch (Exception ex) {
-                    if (running) // Evita exibir erro se a porta fechar ao sair
+                    if (executando) // Evita exibir erro se a porta fechar ao sair
                         Console.WriteLine($"Error na leitura: {ex.Message}");
                 }
             }
         }
 
-        static void EnviarBreak() {
-            serialPort.BreakState = true;
-            EsperarMilissegundos(1); // Crava 1 ms em nível BAIXO
-            serialPort.BreakState = false;
-        }
-
-        static void EnviarDelimitador() {
-            // Garante que o BreakState está desligado (nível ALTO)
-            serialPort.BreakState = false;
-            EsperarMilissegundos(1); // Crava 1 ms em nível ALTO
-        }
-
         static void EnviarByte(byte data) {
             try {
-                serialPort.Write(new[] { data }, 0, 1);
+                if (serialPort.IsOpen) serialPort.Write(new[] { data }, 0, 1);
             } catch (Exception ex) {
-                if (running)
+                if (executando)
                     Console.WriteLine($"Erro ao enviar byte: {ex.Message}");
             }
         }
